@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 242, 242, 247;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+}
+
+/* iOS-inspired styles */
+.ios-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.ios-header {
+  padding: 16px 0;
+  margin-bottom: 16px;
+}
+
+.ios-title {
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.ios-list {
+  margin-top: 24px;
+}
+
+.ios-list-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #e5e5e5;
+  display: flex;
+  justify-content: space-between;
+}
+
+.ios-balance-item {
+  padding: 8px 0;
+  display: flex;
+  justify-content: space-between;
+} 
