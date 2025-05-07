@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Person } from '../data/mockData';
+import { Person, Group } from '../data/mockData';
 import IOSButton from './ui/IOSButton';
 
 interface LayoutProps {
   children: React.ReactNode;
   people: Person[];
-  onAddPerson: (person: Omit<Person, 'id'>) => void;
+  onAddPerson: (person: Omit<Person, 'id' | 'groupIds'>) => void;
+  selectedGroup: Group | null;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, people, onAddPerson }) => {
+const Layout: React.FC<LayoutProps> = ({ children, people, onAddPerson, selectedGroup }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAddingPerson, setIsAddingPerson] = useState(false);
   const [newPersonName, setNewPersonName] = useState('');
@@ -34,11 +35,14 @@ const Layout: React.FC<LayoutProps> = ({ children, people, onAddPerson }) => {
 
   const handleAddPerson = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPersonName.trim()) {
-      onAddPerson({ name: newPersonName.trim() });
-      setNewPersonName('');
-      setIsAddingPerson(false);
-    }
+    if (!newPersonName.trim()) return;
+
+    onAddPerson({
+      name: newPersonName.trim(),
+    });
+
+    setNewPersonName('');
+    setIsAddingPerson(false);
   };
 
   return (
@@ -73,18 +77,22 @@ const Layout: React.FC<LayoutProps> = ({ children, people, onAddPerson }) => {
       <div className={`fixed inset-y-0 left-0 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-200 ease-in-out z-30 w-72 bg-white dark:bg-dark-800 shadow-lg`}>
         <div className="p-6">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">People</h2>
-            <button
-              onClick={() => setIsAddingPerson(true)}
-              className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-dark-700 rounded-lg transition-colors"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+              {selectedGroup ? `${selectedGroup.name} Members` : 'People'}
+            </h2>
+            {selectedGroup && (
+              <button
+                onClick={() => setIsAddingPerson(true)}
+                className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-dark-700 rounded-lg transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            )}
           </div>
 
-          {isAddingPerson ? (
+          {isAddingPerson && selectedGroup ? (
             <form onSubmit={handleAddPerson} className="mb-6">
               <div className="flex items-center space-x-2">
                 <input
@@ -119,6 +127,24 @@ const Layout: React.FC<LayoutProps> = ({ children, people, onAddPerson }) => {
                 <span className="ml-3 text-gray-700 dark:text-gray-300">{person.name}</span>
               </div>
             ))}
+
+            {selectedGroup && people.length === 0 && (
+              <div className="text-center py-4">
+                <p className="text-gray-500 dark:text-gray-400">No members yet</p>
+                <button
+                  onClick={() => setIsAddingPerson(true)}
+                  className="mt-2 text-blue-500 hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  Add your first member
+                </button>
+              </div>
+            )}
+
+            {!selectedGroup && (
+              <div className="text-center py-4">
+                <p className="text-gray-500 dark:text-gray-400">Create or select a group first</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

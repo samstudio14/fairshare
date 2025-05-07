@@ -4,7 +4,7 @@ import IOSButton from './ui/IOSButton';
 
 interface ExpenseFormProps {
   people: Person[];
-  onSubmit: (expense: Omit<Expense, 'id' | 'addedBy'>) => void;
+  onSubmit: (expense: Omit<Expense, 'id' | 'addedById' | 'groupId'>) => void;
   onCancel: () => void;
   isOpen: boolean;
 }
@@ -12,43 +12,43 @@ interface ExpenseFormProps {
 const ExpenseForm: React.FC<ExpenseFormProps> = ({ people, onSubmit, onCancel, isOpen }) => {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
-  const [paidBy, setPaidBy] = useState<Person | null>(null);
-  const [splitBetween, setSplitBetween] = useState<Person[]>([]);
+  const [paidById, setPaidById] = useState<string | null>(null);
+  const [splitBetweenIds, setSplitBetweenIds] = useState<string[]>([]);
   const [splitType, setSplitType] = useState<'equal' | 'unequal'>('equal');
   const [customSplits, setCustomSplits] = useState<{ [key: string]: number }>({});
 
   // Update state when people changes
   useEffect(() => {
     if (people.length > 0) {
-      setPaidBy(people[0]);
-      setSplitBetween(people);
+      setPaidById(people[0].id);
+      setSplitBetweenIds(people.map(p => p.id));
     } else {
-      setPaidBy(null);
-      setSplitBetween([]);
+      setPaidById(null);
+      setSplitBetweenIds([]);
     }
   }, [people]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!paidBy) return;
+    if (!paidById) return;
     
     // Validate minimum 2 people requirement
-    if (splitBetween.length < 2) {
+    if (splitBetweenIds.length < 2) {
       alert('Please select at least 2 people to split the expense');
       return;
     }
 
     const totalAmount = parseFloat(amount);
     const splits = splitType === 'equal'
-      ? splitBetween.map(person => ({ person, amount: totalAmount / splitBetween.length }))
-      : splitBetween.map(person => ({ person, amount: customSplits[person.id] || 0 }));
+      ? splitBetweenIds.map(id => ({ id, amount: totalAmount / splitBetweenIds.length }))
+      : splitBetweenIds.map(id => ({ id, amount: customSplits[id] || 0 }));
 
     onSubmit({
       description,
       amount: totalAmount,
-      paidBy,
+      paidById,
       date: new Date().toISOString().split('T')[0],
-      splitBetween: splits.map(s => s.person),
+      splitBetweenIds,
       customSplits: splitType === 'unequal' ? customSplits : undefined,
     });
 
@@ -56,37 +56,38 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ people, onSubmit, onCancel, i
     setDescription('');
     setAmount('');
     if (people.length > 0) {
-      setPaidBy(people[0]);
-      setSplitBetween(people);
+      setPaidById(people[0].id);
+      setSplitBetweenIds(people.map(p => p.id));
     }
     setSplitType('equal');
     setCustomSplits({});
   };
 
   const togglePerson = (person: Person) => {
-    if (splitBetween.includes(person)) {
-      setSplitBetween(splitBetween.filter(p => p.id !== person.id));
-    } else {
-      setSplitBetween([...splitBetween, person]);
-    }
+    setSplitBetweenIds(prev => {
+      const isSelected = prev.includes(person.id);
+      if (isSelected) {
+        return prev.filter(id => id !== person.id);
+      } else {
+        return [...prev, person.id];
+      }
+    });
   };
 
-  if (!isOpen || people.length === 0) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-40 overflow-y-auto">
       <div className="min-h-screen px-4 text-center">
         <div className="fixed inset-0" onClick={onCancel} />
         
-        <div className="inline-block w-full max-w-2xl my-8 text-left align-middle">
-          <div className="bg-white rounded-xl shadow-xl transform transition-all">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-semibold text-gray-800">Add New Expense</h2>
+        <div className="inline-block w-full max-w-md my-8 text-left align-middle">
+          <div className="bg-white dark:bg-dark-800 rounded-xl shadow-xl transform transition-all">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-dark-700">
+              <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200">Add Expense</h2>
               <button
                 onClick={onCancel}
-                className="p-2 text-gray-400 hover:text-gray-500 transition-colors"
+                className="p-2 text-gray-400 hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -95,7 +96,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ people, onSubmit, onCancel, i
             </div>
 
             <form onSubmit={handleSubmit} className="p-6">
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="group">
                   <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-blue-600">
                     Description
@@ -134,8 +135,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ people, onSubmit, onCancel, i
                     Paid by
                   </label>
                   <select
-                    value={paidBy?.id || ''}
-                    onChange={(e) => setPaidBy(people.find(p => p.id === e.target.value) || null)}
+                    value={paidById || ''}
+                    onChange={(e) => setPaidById(e.target.value)}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition-colors appearance-none bg-white"
                     style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E\")",
                              backgroundRepeat: "no-repeat",
@@ -161,7 +162,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ people, onSubmit, onCancel, i
                       <label key={person.id} className="flex items-center p-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-blue-200 transition-colors">
                         <input
                           type="checkbox"
-                          checked={splitBetween.includes(person)}
+                          checked={splitBetweenIds.includes(person.id)}
                           onChange={() => togglePerson(person)}
                           className="w-5 h-5 rounded text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
                         />
@@ -219,7 +220,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ people, onSubmit, onCancel, i
                       Custom Splits
                     </label>
                     <div className="space-y-3 bg-gray-50 p-4 rounded-xl">
-                      {splitBetween.map(person => (
+                      {people.filter(person => splitBetweenIds.includes(person.id)).map(person => (
                         <div key={person.id} className="flex items-center">
                           <span className="w-24 text-gray-700">{person.name}:</span>
                           <div className="relative flex-1">
