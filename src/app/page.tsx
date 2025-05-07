@@ -1,49 +1,71 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { type Person, type Expense } from '../data/mockData';
+import React, { useState, useEffect } from 'react';
+import { type Person, type Expense, initialPeople, initialExpenses } from '../data/mockData';
 import { calculateBalances, simplifyDebts } from '../lib/calculations';
 import IOSButton from '../components/ui/IOSButton';
 import IOSCard from '../components/ui/IOSCard';
 import IOSModal from '../components/ui/IOSModal';
 import ExpenseForm from '../components/ExpenseForm';
+import Layout from '../components/Layout';
+import AddExpenseButton from '../components/AddExpenseButton';
 
 export default function Home() {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [people, setPeople] = useState<Person[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
+  const [people, setPeople] = useState<Person[]>(initialPeople);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddPersonModalOpen, setIsAddPersonModalOpen] = useState(false);
   const [isViewExpenseModalOpen, setIsViewExpenseModalOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
-  const currentUser = people[0];
-  
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
   useEffect(() => {
+    // Check system preference for dark mode
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setIsDarkMode(true);
+      document.documentElement.classList.add('dark');
+    }
+
     const storedPeople = localStorage.getItem('people');
+    const storedExpenses = localStorage.getItem('expenses');
     if (storedPeople) {
       setPeople(JSON.parse(storedPeople));
+    }
+    if (storedExpenses) {
+      setExpenses(JSON.parse(storedExpenses));
     }
   }, []);
 
   useEffect(() => {
     localStorage.setItem('people', JSON.stringify(people));
-  }, [people]);
+    localStorage.setItem('expenses', JSON.stringify(expenses));
+  }, [people, expenses]);
 
-  // Calculate balances (needed for debts calculations)
-  const balances = calculateBalances(expenses, currentUser);
-  const debts = simplifyDebts(balances);
-
-  const addExpense = (newExpense: Omit<Expense, 'id' | 'addedBy'>) => {
-    setExpenses([...expenses, { 
-      ...newExpense, 
-      id: Date.now().toString(), 
-      addedBy: currentUser 
-    }]);
-    setIsModalOpen(false);
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
+    document.documentElement.classList.toggle('dark');
   };
 
-  const addPerson = (name: string) => {
-    setPeople([...people, { id: Date.now().toString(), name }]);
-    setIsAddPersonModalOpen(false);
+  // Calculate balances only if there are people and expenses
+  const balances = people.length > 0 ? calculateBalances(expenses, people[0]) : [];
+  const debts = people.length > 0 ? simplifyDebts(balances) : [];
+
+  const handleAddPerson = (person: Omit<Person, 'id'>) => {
+    setPeople([...people, { ...person, id: `person-${Date.now()}` }]);
+  };
+
+  const handleAddExpense = (expense: Omit<Expense, 'id' | 'addedBy'>) => {
+    if (people.length < 2) {
+      alert('Please add at least two people before creating an expense.');
+      return;
+    }
+    
+    setExpenses([...expenses, {
+      ...expense,
+      id: `expense-${Date.now()}`,
+      addedBy: people[0]
+    }]);
+    setIsModalOpen(false);
   };
 
   const viewExpenseDetails = (expense: Expense) => {
@@ -52,142 +74,134 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 flex">
-      <aside className="w-1/4 bg-white p-4 border-r">
-        <h2 className="text-lg font-semibold mb-4">People</h2>
-        <ul className="space-y-2">
-          {people.map(person => (
-            <li key={person.id} className="text-gray-800">
-              {person.name}
-            </li>
-          ))}
-        </ul>
-      </aside>
-      <div className="w-3/4 max-w-2xl mx-auto px-4 py-8">
-        {/* Header */}
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Splitwise</h1>
-          <p className="text-gray-600 mt-1">Track shared expenses and balances</p>
-        </header>
-
-        {/* Add person button */}
-        <div className="mb-6">
-          <IOSButton fullWidth onClick={() => setIsAddPersonModalOpen(true)}>
-            Add Person
-          </IOSButton>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+      <Layout people={people} onAddPerson={handleAddPerson}>
+        <div className="absolute top-4 right-4">
+          <button
+            onClick={toggleDarkMode}
+            className="p-2 rounded-full bg-gray-200 dark:bg-dark-700 text-gray-700 dark:text-gray-200"
+          >
+            {isDarkMode ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            )}
+          </button>
         </div>
 
-        {/* Debts section */}
-        {debts.length > 0 && (
-          <IOSCard title="Debts Summary" className="mb-6">
-            {debts.map((debt, index) => (
-              debt.from && debt.to ? (
-                <div key={index} className="flex justify-between items-center py-2 border-b last:border-0">
-                  <div className="flex items-center gap-1">
-                    <span className="font-medium">{debt.from.name}</span>
-                    <span className="text-gray-500">owes</span>
-                    <span className="font-medium">{debt.to.name}</span>
-                  </div>
-                  <span className="font-medium text-blue-600">₹{Math.abs(debt.amount)}</span>
+        <div className="space-y-6">
+          {people.length === 0 ? (
+            <div className="bg-white dark:bg-dark-800 rounded-xl shadow-lg p-6">
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-gray-100 dark:bg-dark-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
                 </div>
-              ) : null
-            ))}
-          </IOSCard>
-        )}
-
-        {/* Add expense button */}
-        <div className="mb-6">
-          <IOSButton fullWidth onClick={() => setIsModalOpen(true)}>
-            Add Expense
-          </IOSButton>
-        </div>
-
-        {/* Expenses list */}
-        <IOSCard title="Recent Expenses">
-          {expenses.map(expense => (
-            <div 
-              key={expense.id} 
-              className="flex justify-between items-center py-3 border-b last:border-0 cursor-pointer hover:bg-gray-50"
-              onClick={() => viewExpenseDetails(expense)}
-            >
-              <div className="flex items-center gap-3">
-                <div>
-                  <div className="font-medium">{expense.description}</div>
-                  <div className="text-sm text-gray-500">
-                    {new Date(expense.date).toLocaleDateString('en-GB')}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    Added by: {expense.addedBy.name}
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="font-medium">₹{expense.amount}</div>
-                <div className="text-sm text-gray-500">
-                  {expense.customSplits 
-                    ? `Unequal split between ${expense.splitBetween.length}`
-                    : `Equal split between ${expense.splitBetween.length}`
-                  }
-                </div>
-                <div className="text-xs text-gray-500">
-                  Paid by: {expense.paidBy.name}
-                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Welcome to FairShare!</h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-6">Start by adding people to your group using the sidebar.</p>
+                <button
+                  onClick={() => setIsAddPersonModalOpen(true)}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-dark-800"
+                >
+                  Add Your First Person
+                </button>
               </div>
             </div>
-          ))}
-        </IOSCard>
+          ) : (
+            <>
+              {/* Debts Summary Section - Now at the top */}
+              <div className="sticky top-4 z-10 mb-6">
+                {debts.length > 0 ? (
+                  <div className="bg-white dark:bg-dark-800 rounded-xl shadow-lg p-6">
+                    <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-6">Debts Summary</h2>
+                    <div className="space-y-4">
+                      {debts.map((debt, index) => (
+                        debt.from && debt.to ? (
+                          <div key={index} className="flex justify-between items-center p-4 bg-gray-50 dark:bg-dark-700 rounded-xl">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-900 dark:text-gray-100">{debt.from.name}</span>
+                              <span className="text-gray-500 dark:text-gray-400">owes</span>
+                              <span className="font-medium text-gray-900 dark:text-gray-100">{debt.to.name}</span>
+                            </div>
+                            <span className="font-medium text-primary-600 dark:text-primary-400">₹{Math.abs(debt.amount).toFixed(2)}</span>
+                          </div>
+                        ) : null
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-white dark:bg-dark-800 rounded-xl shadow-lg p-6">
+                    <div className="text-center py-4">
+                      <p className="text-gray-500 dark:text-gray-400">No debts to settle</p>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-        {/* Expense form modal */}
-        <IOSModal
+              {/* Expenses List - Now below debts summary */}
+              <div className="bg-white dark:bg-dark-800 rounded-xl shadow-lg p-6">
+                <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-6">Expenses</h2>
+                {expenses.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 dark:bg-dark-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No expenses yet</h3>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      {people.length < 2 
+                        ? 'Add at least one more person to start adding expenses'
+                        : 'Add your first expense by clicking the + button'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {expenses.map(expense => (
+                      <div
+                        key={expense.id}
+                        onClick={() => viewExpenseDetails(expense)}
+                        className="flex items-center justify-between p-4 bg-gray-50 dark:bg-dark-700 rounded-xl hover:bg-gray-100 dark:hover:bg-dark-600 transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center space-x-4">
+                          <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-300 flex items-center justify-center font-medium">
+                            {expense.paidBy.name[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100">{expense.description}</h4>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Paid by {expense.paidBy.name}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-medium text-gray-900 dark:text-gray-100">₹{expense.amount.toFixed(2)}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{new Date(expense.date).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Add Expense Form */}
+        <ExpenseForm
+          people={people}
+          onSubmit={handleAddExpense}
+          onCancel={() => setIsModalOpen(false)}
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          title="Add Expense"
-        >
-          <ExpenseForm
-            people={people}
-            onSubmit={addExpense}
-            onCancel={() => setIsModalOpen(false)}
-          />
-        </IOSModal>
+        />
 
-        {/* Add person modal */}
-        <IOSModal
-          isOpen={isAddPersonModalOpen}
-          onClose={() => setIsAddPersonModalOpen(false)}
-          title="Add Person"
-        >
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target as HTMLFormElement);
-            const name = formData.get('name') as string;
-            addPerson(name);
-          }} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Name
-              </label>
-              <input
-                type="text"
-                name="name"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-            <div className="flex space-x-3 pt-4">
-              <IOSButton
-                type="button"
-                variant="secondary"
-                onClick={() => setIsAddPersonModalOpen(false)}
-                className="flex-1"
-              >
-                Cancel
-              </IOSButton>
-              <IOSButton type="submit" className="flex-1">
-                Add Person
-              </IOSButton>
-            </div>
-          </form>
-        </IOSModal>
+        {/* Add Expense Button */}
+        {people.length >= 2 && (
+          <AddExpenseButton onClick={() => setIsModalOpen(true)} />
+        )}
 
         {/* View Expense Detail Modal */}
         <IOSModal
@@ -198,36 +212,36 @@ export default function Home() {
           {selectedExpense && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-500">Amount</div>
-                <div className="font-semibold">₹{selectedExpense.amount}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Amount</div>
+                <div className="font-semibold text-gray-900 dark:text-gray-100">₹{selectedExpense.amount.toFixed(2)}</div>
               </div>
               
               <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-500">Paid by</div>
-                <div className="font-semibold">{selectedExpense.paidBy.name}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Paid by</div>
+                <div className="font-semibold text-gray-900 dark:text-gray-100">{selectedExpense.paidBy.name}</div>
               </div>
               
               <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-500">Date</div>
-                <div className="font-semibold">{new Date(selectedExpense.date).toLocaleDateString('en-GB')}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Date</div>
+                <div className="font-semibold text-gray-900 dark:text-gray-100">{new Date(selectedExpense.date).toLocaleDateString()}</div>
               </div>
               
               <div className="pt-2">
-                <div className="text-sm text-gray-500 mb-2">Split Details</div>
-                <div className="border rounded-lg overflow-hidden">
+                <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">Split Details</div>
+                <div className="border dark:border-dark-600 rounded-lg overflow-hidden">
                   {selectedExpense.splitBetween.map(person => {
                     const customAmount = selectedExpense.customSplits?.[person.id];
                     const equalAmount = selectedExpense.amount / selectedExpense.splitBetween.length;
                     const amount = customAmount !== undefined ? customAmount : equalAmount;
                     
                     return (
-                      <div key={person.id} className="flex justify-between items-center p-2 border-b last:border-0">
-                        <div className="font-medium">{person.name}</div>
+                      <div key={person.id} className="flex justify-between items-center p-2 border-b dark:border-dark-600 last:border-0">
+                        <div className="font-medium text-gray-900 dark:text-gray-100">{person.name}</div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
                             {person.id === selectedExpense.paidBy.id ? "(paid)" : ""}
                           </span>
-                          <span>₹{amount.toFixed(2)}</span>
+                          <span className="text-gray-900 dark:text-gray-100">₹{amount.toFixed(2)}</span>
                         </div>
                       </div>
                     );
@@ -247,7 +261,7 @@ export default function Home() {
             </div>
           )}
         </IOSModal>
-      </div>
-    </main>
+      </Layout>
+    </div>
   );
 } 

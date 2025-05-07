@@ -12,10 +12,10 @@ const IOSButton: React.FC<IOSButtonProps> = ({
   className = '',
   ...props
 }) => {
-  const baseStyles = 'px-4 py-2 rounded-lg font-medium transition-colors duration-200';
+  const baseStyles = 'relative px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2';
   const variantStyles = {
-    primary: 'bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700',
-    secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300 active:bg-gray-400',
+    primary: 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md hover:shadow-lg active:shadow-sm focus:ring-blue-500',
+    secondary: 'bg-white text-gray-700 border-2 border-gray-200 hover:border-gray-300 active:bg-gray-50 focus:ring-gray-400',
   };
   const widthStyles = fullWidth ? 'w-full' : '';
 
