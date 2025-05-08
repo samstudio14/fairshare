@@ -33,12 +33,6 @@ const GroupList: React.FC<GroupListProps> = ({ groups, onCreateGroup, onSelectGr
             </svg>
           </div>
           <p className="text-gray-500 dark:text-gray-400">No groups created yet</p>
-          <IOSButton
-            onClick={onCreateGroup}
-            className="mt-4"
-          >
-            Create Your First Group
-          </IOSButton>
         </div>
       ) : (
         <div className="space-y-3">

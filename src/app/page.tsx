@@ -269,28 +269,28 @@ export default function Home() {
         >
           {selectedExpense && (
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-500 dark:text-gray-400">Amount</div>
-                <div className="font-semibold text-gray-900 dark:text-gray-100">₹{selectedExpense.amount.toFixed(2)}</div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-dark-700 rounded-lg">
+                <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Amount</div>
+                <div className="text-lg font-semibold text-primary-600 dark:text-primary-400">₹{selectedExpense.amount.toFixed(2)}</div>
               </div>
               
-              <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-500 dark:text-gray-400">Paid by</div>
-                <div className="font-semibold text-gray-900 dark:text-gray-100">
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-dark-700 rounded-lg">
+                <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Paid by</div>
+                <div className="text-base font-semibold text-gray-900 dark:text-gray-100">
                   {getPersonById(selectedExpense.paidById)?.name}
                 </div>
               </div>
               
-              <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-500 dark:text-gray-400">Date</div>
-                <div className="font-semibold text-gray-900 dark:text-gray-100">
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-dark-700 rounded-lg">
+                <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Date</div>
+                <div className="text-base font-semibold text-gray-900 dark:text-gray-100">
                   {new Date(selectedExpense.date).toLocaleDateString()}
                 </div>
               </div>
               
-              <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-500 dark:text-gray-400">Split between</div>
-                <div className="font-semibold text-gray-900 dark:text-gray-100">
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-dark-700 rounded-lg">
+                <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Split between</div>
+                <div className="text-base font-semibold text-gray-900 dark:text-gray-100">
                   {selectedExpense.splitBetweenIds
                     .map(id => getPersonById(id)?.name)
                     .filter(Boolean)
